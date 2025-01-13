@@ -1,9 +1,14 @@
 import { StrictMode, Suspense } from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react'
-import { it } from 'vitest'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import userEventOrig from '@testing-library/user-event'
+import { expect, it } from 'vitest'
 import { useAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
 import { RESET, atomWithDefault } from 'jotai/vanilla/utils'
+
+const userEvent = {
+  click: (element: Element) => act(() => userEventOrig.click(element)),
+}
 
 it('simple sync get default', async () => {
   const count1Atom = atom(1)
@@ -23,22 +28,22 @@ it('simple sync get default', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Counter />
     </StrictMode>,
   )
 
-  await findByText('count1: 1, count2: 2')
+  await screen.findByText('count1: 1, count2: 2')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('count1: 2, count2: 4')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('count1: 2, count2: 4')
 
-  fireEvent.click(getByText('button2'))
-  await findByText('count1: 2, count2: 5')
+  await userEvent.click(screen.getByText('button2'))
+  await screen.findByText('count1: 2, count2: 5')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('count1: 3, count2: 5')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('count1: 3, count2: 5')
 })
 
 it('simple async get default', async () => {
@@ -65,30 +70,32 @@ it('simple async get default', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
-    <StrictMode>
-      <Suspense fallback="loading">
-        <Counter />
-      </Suspense>
-    </StrictMode>,
-  )
+  await act(async () => {
+    render(
+      <StrictMode>
+        <Suspense fallback="loading">
+          <Counter />
+        </Suspense>
+      </StrictMode>,
+    )
+  })
 
-  await findByText('loading')
+  await screen.findByText('loading')
   resolve()
-  await findByText('count1: 1, count2: 2')
+  await screen.findByText('count1: 1, count2: 2')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('loading')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('loading')
   resolve()
-  await findByText('count1: 2, count2: 4')
+  await screen.findByText('count1: 2, count2: 4')
 
-  fireEvent.click(getByText('button2'))
+  await userEvent.click(screen.getByText('button2'))
   resolve()
-  await findByText('count1: 2, count2: 5')
+  await screen.findByText('count1: 2, count2: 5')
 
-  fireEvent.click(getByText('button1'))
+  await userEvent.click(screen.getByText('button1'))
   resolve()
-  await findByText('count1: 3, count2: 5')
+  await screen.findByText('count1: 3, count2: 5')
 })
 
 it('refresh sync atoms to default values', async () => {
@@ -110,28 +117,28 @@ it('refresh sync atoms to default values', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Counter />
     </StrictMode>,
   )
 
-  await findByText('count1: 1, count2: 2')
+  await screen.findByText('count1: 1, count2: 2')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('count1: 2, count2: 4')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('count1: 2, count2: 4')
 
-  fireEvent.click(getByText('button2'))
-  await findByText('count1: 2, count2: 5')
+  await userEvent.click(screen.getByText('button2'))
+  await screen.findByText('count1: 2, count2: 5')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('count1: 3, count2: 5')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('count1: 3, count2: 5')
 
-  fireEvent.click(getByText('Refresh count2'))
-  await findByText('count1: 3, count2: 6')
+  await userEvent.click(screen.getByText('Refresh count2'))
+  await screen.findByText('count1: 3, count2: 6')
 
-  fireEvent.click(getByText('button1'))
-  await findByText('count1: 4, count2: 8')
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('count1: 4, count2: 8')
 })
 
 it('refresh async atoms to default values', async () => {
@@ -159,48 +166,73 @@ it('refresh async atoms to default values', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
-    <StrictMode>
-      <Suspense fallback="loading">
-        <Counter />
-      </Suspense>
-    </StrictMode>,
-  )
-
-  await findByText('loading')
-  await waitFor(() => {
-    resolve()
-    getByText('count1: 1, count2: 2')
+  await act(async () => {
+    render(
+      <StrictMode>
+        <Suspense fallback="loading">
+          <Counter />
+        </Suspense>
+      </StrictMode>,
+    )
   })
 
-  fireEvent.click(getByText('button1'))
-  await findByText('loading')
+  await screen.findByText('loading')
   await waitFor(() => {
     resolve()
-    getByText('count1: 2, count2: 4')
+    screen.getByText('count1: 1, count2: 2')
   })
 
-  fireEvent.click(getByText('button2'))
+  await userEvent.click(screen.getByText('button1'))
+  await screen.findByText('loading')
   await waitFor(() => {
     resolve()
-    getByText('count1: 2, count2: 5')
+    screen.getByText('count1: 2, count2: 4')
   })
 
-  fireEvent.click(getByText('button1'))
+  await userEvent.click(screen.getByText('button2'))
   await waitFor(() => {
     resolve()
-    getByText('count1: 3, count2: 5')
+    screen.getByText('count1: 2, count2: 5')
   })
 
-  fireEvent.click(getByText('Refresh count2'))
+  await userEvent.click(screen.getByText('button1'))
   await waitFor(() => {
     resolve()
-    getByText('count1: 3, count2: 6')
+    screen.getByText('count1: 3, count2: 5')
   })
 
-  fireEvent.click(getByText('button1'))
+  await userEvent.click(screen.getByText('Refresh count2'))
   await waitFor(() => {
     resolve()
-    getByText('count1: 4, count2: 8')
+    screen.getByText('count1: 3, count2: 6')
   })
+
+  await userEvent.click(screen.getByText('button1'))
+  await waitFor(() => {
+    resolve()
+    screen.getByText('count1: 4, count2: 8')
+  })
+})
+
+it('can be set synchronously by passing value', async () => {
+  const countAtom = atomWithDefault(() => 1)
+
+  const Counter = () => {
+    const [count, setCount] = useAtom(countAtom)
+
+    return (
+      <>
+        <div>count: {count}</div>
+        <button onClick={() => setCount(10)}>Set to 10</button>
+      </>
+    )
+  }
+
+  render(<Counter />)
+
+  expect(screen.getByText('count: 1')).toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Set to 10' }))
+
+  expect(screen.getByText('count: 10')).toBeInTheDocument()
 })

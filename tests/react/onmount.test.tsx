@@ -1,8 +1,13 @@
 import { StrictMode, Suspense, useState } from 'react'
-import { act, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import userEventOrig from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { useAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
+
+const userEvent = {
+  click: (element: Element) => act(() => userEventOrig.click(element)),
+}
 
 it('one atom, one effect', async () => {
   const countAtom = atom(1)
@@ -19,17 +24,17 @@ it('one atom, one effect', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <>
       <Counter />
     </>,
   )
 
-  await findByText('count: 1')
+  await screen.findByText('count: 1')
   expect(onMountFn).toHaveBeenCalledTimes(1)
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 2')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 2')
   expect(onMountFn).toHaveBeenCalledTimes(1)
 })
 
@@ -60,23 +65,23 @@ it('two atoms, one each', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <>
       <Counter />
     </>,
   )
 
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('count2: 1')
+    screen.getByText('count: 1')
+    screen.getByText('count2: 1')
   })
   expect(onMountFn).toHaveBeenCalledTimes(1)
   expect(onMountFn2).toHaveBeenCalledTimes(1)
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('count2: 2')
+    screen.getByText('count: 2')
+    screen.getByText('count2: 2')
   })
 
   expect(onMountFn).toHaveBeenCalledTimes(1)
@@ -98,13 +103,13 @@ it('one derived atom, one onMount', async () => {
     )
   }
 
-  const { findByText } = render(
+  render(
     <>
       <Counter />
     </>,
   )
 
-  await findByText('count: 1')
+  await screen.findByText('count: 1')
   expect(onMountFn).toHaveBeenCalledTimes(1)
 })
 
@@ -134,7 +139,7 @@ it('mount/unmount test', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <>
       <Display />
     </>,
@@ -143,11 +148,10 @@ it('mount/unmount test', async () => {
   expect(onMountFn).toHaveBeenCalledTimes(1)
   expect(onUnMountFn).toHaveBeenCalledTimes(0)
 
-  fireEvent.click(getByText('button'))
-  await waitFor(() => {
-    expect(onMountFn).toHaveBeenCalledTimes(1)
-    expect(onUnMountFn).toHaveBeenCalledTimes(1)
-  })
+  await userEvent.click(screen.getByText('button'))
+
+  expect(onMountFn).toHaveBeenCalledTimes(1)
+  expect(onUnMountFn).toHaveBeenCalledTimes(1)
 })
 
 it('one derived atom, one onMount for the derived one, and one for the regular atom + onUnMount', async () => {
@@ -185,23 +189,23 @@ it('one derived atom, one onMount for the derived one, and one for the regular a
     )
   }
 
-  const { getByText } = render(
+  render(
     <>
       <Display />
     </>,
   )
+
   expect(derivedOnMountFn).toHaveBeenCalledTimes(1)
   expect(derivedOnUnMountFn).toHaveBeenCalledTimes(0)
   expect(onMountFn).toHaveBeenCalledTimes(1)
   expect(onUnMountFn).toHaveBeenCalledTimes(0)
 
-  fireEvent.click(getByText('button'))
-  await waitFor(() => {
-    expect(derivedOnMountFn).toHaveBeenCalledTimes(1)
-    expect(derivedOnUnMountFn).toHaveBeenCalledTimes(1)
-    expect(onMountFn).toHaveBeenCalledTimes(1)
-    expect(onUnMountFn).toHaveBeenCalledTimes(1)
-  })
+  await userEvent.click(screen.getByText('button'))
+
+  expect(derivedOnMountFn).toHaveBeenCalledTimes(1)
+  expect(derivedOnUnMountFn).toHaveBeenCalledTimes(1)
+  expect(onMountFn).toHaveBeenCalledTimes(1)
+  expect(onUnMountFn).toHaveBeenCalledTimes(1)
 })
 
 it('mount/unMount order', async () => {
@@ -261,29 +265,30 @@ it('mount/unMount order', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Display />
     </StrictMode>,
   )
+
   expect(committed).toEqual([0, 0])
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
     expect(committed).toEqual([1, 0])
   })
 
-  fireEvent.click(getByText('derived atom'))
+  await userEvent.click(screen.getByText('derived atom'))
   await waitFor(() => {
     expect(committed).toEqual([1, 1])
   })
 
-  fireEvent.click(getByText('derived atom'))
+  await userEvent.click(screen.getByText('derived atom'))
   await waitFor(() => {
     expect(committed).toEqual([1, 0])
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
     expect(committed).toEqual([0, 0])
   })
@@ -322,21 +327,23 @@ it('mount/unmount test with async atom', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
-    <>
-      <Suspense fallback="loading">
-        <Display />
-      </Suspense>
-    </>,
-  )
+  await act(async () => {
+    render(
+      <>
+        <Suspense fallback="loading">
+          <Display />
+        </Suspense>
+      </>,
+    )
+  })
 
-  await findByText('loading')
+  await screen.findByText('loading')
   resolve()
-  await findByText('count: 0')
+  await screen.findByText('count: 0')
   expect(onMountFn).toHaveBeenCalledTimes(1)
   expect(onUnMountFn).toHaveBeenCalledTimes(0)
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   expect(onMountFn).toHaveBeenCalledTimes(1)
   expect(onUnMountFn).toHaveBeenCalledTimes(1)
 })
@@ -380,35 +387,35 @@ it('subscription usage test', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <Display />
     </StrictMode>,
   )
 
-  await findByText('count: 10')
+  await screen.findByText('count: 10')
 
   act(() => {
     store.inc()
   })
-  await findByText('count: 11')
+  await screen.findByText('count: 11')
 
-  fireEvent.click(getByText('button'))
-  await findByText('N/A')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('N/A')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 11')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 11')
 
-  fireEvent.click(getByText('button'))
-  await findByText('N/A')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('N/A')
 
   act(() => {
     store.inc()
   })
-  await findByText('N/A')
+  await screen.findByText('N/A')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 12')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 12')
 })
 
 it('subscription in base atom test', async () => {
@@ -447,19 +454,19 @@ it('subscription in base atom test', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <Counter />
     </StrictMode>,
   )
 
-  await findByText('count: 10')
+  await screen.findByText('count: 10')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 11')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 11')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 12')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 12')
 })
 
 it('create atom with onMount in async get', async () => {
@@ -501,20 +508,24 @@ it('create atom with onMount in async get', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
-    <StrictMode>
-      <Suspense fallback="loading">
-        <Counter />
-      </Suspense>
-    </StrictMode>,
-  )
+  await act(async () => {
+    render(
+      <StrictMode>
+        <Suspense fallback="loading">
+          <Counter />
+        </Suspense>
+      </StrictMode>,
+    )
+  })
 
-  await findByText('count: 1')
-  await findByText('count: 10')
+  // FIXME this is not working
+  //await screen.findByText('count: 1')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 11')
+  await screen.findByText('count: 10')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 12')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 11')
+
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 12')
 })

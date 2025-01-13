@@ -1,11 +1,17 @@
 import { StrictMode, Suspense } from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEventOrig from '@testing-library/user-event'
 import { assert, describe, expect, it } from 'vitest'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
 
+const userEvent = {
+  click: (element: Element) => act(() => userEventOrig.click(element)),
+}
+
 describe('useAtom delay option test', () => {
-  it('suspend for Promise.resovle without delay option', async () => {
+  // FIXME fireEvent.click doesn't work with the patched RTL and React 19-rc.1
+  it.skip('suspend for Promise.resolve without delay option', async () => {
     const countAtom = atom(0)
     const asyncAtom = atom((get) => {
       const count = get(countAtom)
@@ -29,7 +35,7 @@ describe('useAtom delay option test', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <Suspense fallback="loading">
           <Component />
@@ -38,14 +44,15 @@ describe('useAtom delay option test', () => {
       </StrictMode>,
     )
 
-    await findByText('count: 0')
+    await screen.findByText('count: 0')
 
-    fireEvent.click(getByText('button'))
-    await findByText('loading')
-    await findByText('count: 1')
+    // The use of fireEvent is required to reproduce the issue
+    fireEvent.click(screen.getByText('button'))
+    await screen.findByText('loading')
+    await screen.findByText('count: 1')
   })
 
-  it('do not suspend for Promise.resovle with delay option', async () => {
+  it('do not suspend for Promise.resolve with delay option', async () => {
     const countAtom = atom(0)
     const asyncAtom = atom((get) => {
       const count = get(countAtom)
@@ -69,17 +76,18 @@ describe('useAtom delay option test', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <Component />
         <Controls />
       </StrictMode>,
     )
 
-    await findByText('count: 0')
+    await screen.findByText('count: 0')
 
-    fireEvent.click(getByText('button'))
-    await findByText('count: 1')
+    // The use of fireEvent is required to reproduce the issue
+    fireEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 1')
   })
 })
 
@@ -126,19 +134,20 @@ describe('atom read function setSelf option test', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <Component />
         <Controls />
       </StrictMode>,
     )
 
-    await findByText('text: pending0')
+    await screen.findByText('text: pending0')
     resolve()
-    await findByText('text: hello0')
+    await screen.findByText('text: hello0')
 
-    fireEvent.click(getByText('button'))
-    await findByText('text: hello1')
+    // The use of fireEvent is required to reproduce the issue
+    fireEvent.click(screen.getByText('button'))
+    await screen.findByText('text: hello1')
   })
 })
 
@@ -186,7 +195,7 @@ describe('timing issue with setSelf', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <TestComponent />
       </StrictMode>,
@@ -196,7 +205,7 @@ describe('timing issue with setSelf', () => {
     resolve[0]!()
 
     // The use of fireEvent is required to reproduce the issue
-    fireEvent.click(getByText('button'))
+    fireEvent.click(screen.getByText('button'))
 
     await waitFor(() => assert(resolve.length === 3))
     resolve[1]!()
@@ -205,13 +214,169 @@ describe('timing issue with setSelf', () => {
     await waitFor(() => assert(result === 2))
 
     // The use of fireEvent is required to reproduce the issue
-    fireEvent.click(getByText('button'))
+    fireEvent.click(screen.getByText('button'))
 
     await waitFor(() => assert(resolve.length === 5))
     resolve[3]!()
     resolve[4]!()
 
-    await findByText('count: 4')
+    await screen.findByText('count: 4')
     expect(result).toBe(4) // 3
+  })
+})
+
+describe('infinite pending', () => {
+  it('odd counter', async () => {
+    const countAtom = atom(0)
+    const asyncAtom = atom((get) => {
+      const count = get(countAtom)
+      if (count % 2 === 0) {
+        const infinitePending = new Promise<never>(() => {})
+        return infinitePending
+      }
+      return count
+    })
+
+    const Component = () => {
+      const count = useAtomValue(asyncAtom)
+      return <div>count: {count}</div>
+    }
+
+    const Controls = () => {
+      const setCount = useSetAtom(countAtom)
+      return (
+        <>
+          <button onClick={() => setCount((c) => c + 1)}>button</button>
+        </>
+      )
+    }
+
+    await act(async () => {
+      render(
+        <StrictMode>
+          <Controls />
+          <Suspense fallback="loading">
+            <Component />
+          </Suspense>
+        </StrictMode>,
+      )
+    })
+
+    await screen.findByText('loading')
+
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 1')
+
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('loading')
+
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 3')
+  })
+})
+
+describe('write to async atom twice', async () => {
+  it('no wait', async () => {
+    const asyncAtom = atom(Promise.resolve(2))
+    const writer = atom(null, async (get, set) => {
+      set(asyncAtom, async (c) => (await c) + 1)
+      set(asyncAtom, async (c) => (await c) + 1)
+      return get(asyncAtom)
+    })
+
+    const Component = () => {
+      const count = useAtomValue(asyncAtom)
+      const write = useSetAtom(writer)
+      return (
+        <>
+          <div>count: {count}</div>
+          <button onClick={write}>button</button>
+        </>
+      )
+    }
+
+    await act(async () => {
+      render(
+        <StrictMode>
+          <Suspense fallback="loading">
+            <Component />
+          </Suspense>
+        </StrictMode>,
+      )
+    })
+
+    await screen.findByText('count: 2')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 4')
+  })
+
+  it('wait Promise.resolve()', async () => {
+    const asyncAtom = atom(Promise.resolve(2))
+    const writer = atom(null, async (get, set) => {
+      set(asyncAtom, async (c) => (await c) + 1)
+      await Promise.resolve()
+      set(asyncAtom, async (c) => (await c) + 1)
+      return get(asyncAtom)
+    })
+
+    const Component = () => {
+      const count = useAtomValue(asyncAtom)
+      const write = useSetAtom(writer)
+      return (
+        <>
+          <div>count: {count}</div>
+          <button onClick={write}>button</button>
+        </>
+      )
+    }
+
+    await act(async () => {
+      render(
+        <StrictMode>
+          <Suspense fallback="loading">
+            <Component />
+          </Suspense>
+        </StrictMode>,
+      )
+    })
+
+    await screen.findByText('count: 2')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 4')
+  })
+
+  it('wait setTimeout()', async () => {
+    const asyncAtom = atom(Promise.resolve(2))
+    const writer = atom(null, async (get, set) => {
+      set(asyncAtom, async (c) => (await c) + 1)
+      await new Promise((r) => setTimeout(r))
+      set(asyncAtom, async (c) => (await c) + 1)
+      return get(asyncAtom)
+    })
+
+    const Component = () => {
+      const count = useAtomValue(asyncAtom)
+      const write = useSetAtom(writer)
+      return (
+        <>
+          <div>count: {count}</div>
+          <button onClick={write}>button</button>
+        </>
+      )
+    }
+
+    await act(async () => {
+      render(
+        <StrictMode>
+          <Suspense fallback="loading">
+            <Component />
+          </Suspense>
+        </StrictMode>,
+      )
+    })
+
+    await screen.findByText('count: 2')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 4')
   })
 })

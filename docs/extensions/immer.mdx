@@ -10,12 +10,12 @@ keywords: immer
 You have to install `immer` and `jotai-immer` to use this feature.
 
 ```
-npm i immer jotai-immer
+npm install immer jotai-immer
 ```
 
 ## atomWithImmer
 
-`atomWithImmer` creates a new atom similar to the regular [`atom`](../core/atom.mdx) [atom] with a different `writeFunction`. In this bundle, we don't have read-only atoms, because the point of these functions is the immer produce(mutability) function.
+`atomWithImmer` creates a new atom similar to the regular [`atom`](../core/atom.mdx) with a different `writeFunction`. In this bundle, we don't have read-only atoms, because the point of these functions is the immer produce(mutability) function.
 The signature of writeFunction is `(get, set, update: (draft: Draft<Value>) => void) => void`.
 
 ```jsx
@@ -44,7 +44,7 @@ const Controls = () => {
 
 Check this example with atomWithImmer:
 
-<CodeSandbox id="83l6sr" />
+<Stackblitz id="vitejs-vite-tblppw" file="src%2FApp.tsx" />
 
 ## withImmer
 
@@ -77,14 +77,14 @@ const Controls = () => {
 
 Check this example with withImmer:
 
-<CodeSandbox id="fn49h2" />
+<Stackblitz id="vitejs-vite-jwfjqm" file="src%2FApp.tsx" />
 
 ## useImmerAtom
 
 This hook takes an atom and replaces the atom's `writeFunction` with the new immer-like `writeFunction` like the previous helpers.
 
 ```jsx
-import { useAtom } from 'jotai'
+import { atom } from 'jotai'
 import { useImmerAtom } from 'jotai-immer'
 
 const primitiveAtom = atom({ value: 0 })
@@ -113,8 +113,8 @@ You can use `useSetImmerAtom` if you need only the setter part of `useImmerAtom`
 
 Check this example with useImmerAtom:
 
-<CodeSandbox id="np7y97" />
+<Stackblitz id="vitejs-vite-k2rixl" file="src%2FApp.tsx" />
 
 ## Demo
 
-<CodeSandbox id="9q4dg7" />
+<Stackblitz id="vitejs-vite-tksbwq" file="src%2FApp.tsx" />

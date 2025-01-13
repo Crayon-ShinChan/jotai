@@ -1,9 +1,16 @@
 import { StrictMode, Suspense } from 'react'
-import { act, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { useAtom } from 'jotai/react'
 import { atom, createStore } from 'jotai/vanilla'
-import { RESET, atomWithStorage, createJSONStorage } from 'jotai/vanilla/utils'
+import {
+  RESET,
+  atomWithStorage,
+  createJSONStorage,
+  unstable_withStorageValidator as withStorageValidator,
+} from 'jotai/vanilla/utils'
+import type { SyncStringStorage } from 'jotai/vanilla/utils/atomWithStorage'
 
 const resolve: (() => void)[] = []
 
@@ -59,20 +66,20 @@ describe('atomWithStorage (sync)', () => {
       )
     }
 
-    const { findByText, getByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('count: 10')
+    await screen.findByText('count: 10')
 
-    fireEvent.click(getByText('button'))
-    await findByText('count: 11')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 11')
     expect(storageData.count).toBe(11)
 
-    fireEvent.click(getByText('reset'))
-    await findByText('count: 1')
+    await userEvent.click(screen.getByText('reset'))
+    await screen.findByText('count: 1')
     expect(storageData.count).toBeUndefined()
   })
 
@@ -89,13 +96,13 @@ describe('atomWithStorage (sync)', () => {
       return <div>count: {count}</div>
     }
 
-    const { findByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('count: 9')
+    await screen.findByText('count: 9')
   })
 })
 
@@ -154,28 +161,28 @@ describe('with sync string storage', () => {
       )
     }
 
-    const { findByText, getByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('count: 10')
+    await screen.findByText('count: 10')
 
-    fireEvent.click(getByText('button'))
-    await findByText('count: 11')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 11')
     expect(storageData.count).toBe('11')
 
-    fireEvent.click(getByText('reset'))
-    await findByText('count: 1')
+    await userEvent.click(screen.getByText('reset'))
+    await screen.findByText('count: 1')
     expect(storageData.count).toBeUndefined()
 
-    fireEvent.click(getByText('button'))
-    await findByText('count: 2')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('count: 2')
     expect(storageData.count).toBe('2')
 
-    fireEvent.click(getByText('conditional reset'))
-    await findByText('count: 1')
+    await userEvent.click(screen.getByText('conditional reset'))
+    await screen.findByText('count: 1')
     expect(storageData.count).toBeUndefined()
   })
 
@@ -187,13 +194,13 @@ describe('with sync string storage', () => {
       return <div>noentry: {noentry}</div>
     }
 
-    const { findByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('noentry: -1')
+    await screen.findByText('noentry: -1')
   })
 })
 
@@ -235,28 +242,30 @@ describe('atomWithStorage (async)', () => {
       )
     }
 
-    const { findByText, getByText } = render(
-      <StrictMode>
-        <Suspense fallback="loading">
-          <Counter />
-        </Suspense>
-      </StrictMode>,
-    )
+    await act(async () => {
+      render(
+        <StrictMode>
+          <Suspense fallback="loading">
+            <Counter />
+          </Suspense>
+        </StrictMode>,
+      )
+    })
 
-    act(() => resolve.splice(0).forEach((fn) => fn()))
-    await findByText('count: 10')
+    resolve.splice(0).forEach((fn) => fn())
+    await screen.findByText('count: 10')
 
-    fireEvent.click(getByText('button'))
-    act(() => resolve.splice(0).forEach((fn) => fn()))
-    await findByText('count: 11')
-    act(() => resolve.splice(0).forEach((fn) => fn()))
+    await userEvent.click(screen.getByText('button'))
+    resolve.splice(0).forEach((fn) => fn())
+    await screen.findByText('count: 11')
+    resolve.splice(0).forEach((fn) => fn())
     await waitFor(() => {
       expect(asyncStorageData.count).toBe(11)
     })
 
-    fireEvent.click(getByText('reset'))
-    act(() => resolve.splice(0).forEach((fn) => fn()))
-    await findByText('count: 1')
+    await userEvent.click(screen.getByText('reset'))
+    resolve.splice(0).forEach((fn) => fn())
+    await screen.findByText('count: 1')
     await waitFor(() => {
       expect(asyncStorageData.count).toBeUndefined()
     })
@@ -277,7 +286,7 @@ describe('atomWithStorage (async)', () => {
       )
     }
 
-    const { findByText, getByText } = render(
+    render(
       <StrictMode>
         <Suspense fallback="loading">
           <Counter />
@@ -285,12 +294,12 @@ describe('atomWithStorage (async)', () => {
       </StrictMode>,
     )
 
-    await findByText('count: 20')
+    await screen.findByText('count: 20')
 
-    fireEvent.click(getByText('button'))
-    act(() => resolve.splice(0).forEach((fn) => fn()))
-    await findByText('count: 21')
-    act(() => resolve.splice(0).forEach((fn) => fn()))
+    await userEvent.click(screen.getByText('button'))
+    resolve.splice(0).forEach((fn) => fn())
+    await screen.findByText('count: 21')
+    resolve.splice(0).forEach((fn) => fn())
     await waitFor(() => {
       expect(asyncStorageData.count2).toBe(21)
     })
@@ -317,13 +326,13 @@ describe('atomWithStorage (without localStorage) (#949)', () => {
       )
     }
 
-    const { findByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('count: 1')
+    await screen.findByText('count: 1')
   })
 })
 
@@ -347,19 +356,61 @@ describe('atomWithStorage (in non-browser environment)', () => {
   }
 
   const addEventListener = window.addEventListener
+  const localStorage = window.localStorage
+  const sessionStorage = window.sessionStorage
+  const consoleWarn = window.console.warn
 
   beforeAll(() => {
     ;(window as any).addEventListener = undefined
+    // patch console.warn to prevent logging along test results
+    Object.defineProperty(window.console, 'warn', {
+      value: () => {},
+    })
+    Object.defineProperties(window, {
+      localStorage: {
+        get() {
+          throw new Error('localStorage is not available.')
+        },
+      },
+      sessionStorage: {
+        get() {
+          throw new Error('sessionStorage is not available.')
+        },
+      },
+    })
   })
 
   afterAll(() => {
     window.addEventListener = addEventListener
+    Object.defineProperty(window.console, 'warn', {
+      value: consoleWarn,
+    })
+    Object.defineProperties(window, {
+      localStorage: {
+        get() {
+          return localStorage
+        },
+      },
+      sessionStorage: {
+        get() {
+          return sessionStorage
+        },
+      },
+    })
   })
 
   it('createJSONStorage with undefined window.addEventListener', async () => {
     const storage = createJSONStorage(() => asyncDummyStorage)
-
     expect(storage.subscribe).toBeUndefined()
+  })
+
+  it('createJSONStorage with localStorage', async () => {
+    expect(() => createJSONStorage()).not.toThrow()
+    expect(() => createJSONStorage(() => window.localStorage)).not.toThrow()
+  })
+
+  it('createJSONStorage with sessionStorage', async () => {
+    expect(() => createJSONStorage(() => window.sessionStorage)).not.toThrow()
   })
 })
 
@@ -409,7 +460,7 @@ describe('atomWithStorage (with browser storage)', () => {
     )
 
     const storageEventHandler = mockAddEventListener.mock.calls
-      .filter(([eventName]: [string]) => eventName === 'storage')
+      .filter(([eventName]: any) => eventName === 'storage')
       .pop()?.[1] as (e: StorageEvent) => void
 
     expect(store.get(dummyAtom)).toBe(1)
@@ -466,7 +517,7 @@ describe('atomWithStorage (with browser storage)', () => {
         if (!get(isLoggedAtom)) return false
         return get(isDevModeStorageAtom)
       },
-      (get, set, value: boolean) => {
+      (_get, set, value: boolean) => {
         set(isDevModeStorageAtom, value)
       },
     )
@@ -483,7 +534,7 @@ describe('atomWithStorage (with browser storage)', () => {
       ) : null
     }
 
-    const { getByRole } = render(
+    render(
       <StrictMode>
         <DummyComponent />
       </StrictMode>,
@@ -491,14 +542,14 @@ describe('atomWithStorage (with browser storage)', () => {
 
     act(() => store.set(isLoggedAtom, true))
 
-    const checkbox = getByRole('checkbox') as HTMLInputElement
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
 
     expect(store.get(isLoggedAtom)).toBeTruthy()
     expect(store.get(isDevModeStorageAtom)).toBeTruthy()
 
-    expect(checkbox.checked).toBeTruthy()
-    fireEvent.click(checkbox)
-    expect(checkbox.checked).toBeFalsy()
+    expect(checkbox).toBeChecked()
+    await userEvent.click(checkbox)
+    expect(checkbox).not.toBeChecked()
   })
 })
 
@@ -531,13 +582,13 @@ describe('atomWithStorage (with disabled browser storage)', () => {
       )
     }
 
-    const { findByText } = render(
+    render(
       <StrictMode>
         <Counter />
       </StrictMode>,
     )
 
-    await findByText('count: 4')
+    await screen.findByText('count: 4')
   })
 })
 
@@ -586,5 +637,111 @@ describe('atomWithStorage (with non-browser storage)', () => {
       'storage',
       expect.any(Function),
     )
+  })
+})
+
+describe('withStorageValidator', () => {
+  it('should use withStorageValidator with isNumber', () => {
+    const storage = createJSONStorage()
+    const isNumber = (v: unknown): v is number => typeof v === 'number'
+    atomWithStorage('my-number', 0, withStorageValidator(isNumber)(storage))
+  })
+})
+
+describe('with subscribe method in string storage', () => {
+  it('createJSONStorage subscriber is called correctly', async () => {
+    const store = createStore()
+
+    const subscribe = vi.fn()
+    const stringStorage = {
+      getItem: () => {
+        return null
+      },
+      setItem: () => {},
+      removeItem: () => {},
+      subscribe,
+    }
+
+    const dummyStorage = createJSONStorage<number>(() => stringStorage)
+
+    const dummyAtom = atomWithStorage<number>('dummy', 1, dummyStorage)
+
+    const DummyComponent = () => {
+      const [value] = useAtom(dummyAtom, { store })
+      return (
+        <>
+          <div>{value}</div>
+        </>
+      )
+    }
+
+    render(
+      <StrictMode>
+        <DummyComponent />
+      </StrictMode>,
+    )
+
+    expect(subscribe).toHaveBeenCalledWith('dummy', expect.any(Function))
+  })
+
+  it('createJSONStorage subscriber responds to events correctly', async () => {
+    const storageData: Record<string, string> = {
+      count: '10',
+    }
+
+    const stringStorage = {
+      getItem: (key: string) => {
+        return storageData[key] || null
+      },
+      setItem: (key: string, newValue: string) => {
+        storageData[key] = newValue
+      },
+      removeItem: (key: string) => {
+        delete storageData[key]
+      },
+      subscribe(_key, callback) {
+        function handler(event: CustomEvent<string>) {
+          callback(event.detail)
+        }
+
+        window.addEventListener('dummystoragechange', handler as EventListener)
+        return () =>
+          window.removeEventListener(
+            'dummystoragechange',
+            handler as EventListener,
+          )
+      },
+    } as SyncStringStorage
+
+    const dummyStorage = createJSONStorage<number>(() => stringStorage)
+
+    const countAtom = atomWithStorage('count', 1, dummyStorage)
+
+    const Counter = () => {
+      const [count] = useAtom(countAtom)
+      return (
+        <>
+          <div>count: {count}</div>
+        </>
+      )
+    }
+
+    render(
+      <StrictMode>
+        <Counter />
+      </StrictMode>,
+    )
+
+    await screen.findByText('count: 10')
+
+    storageData.count = '12'
+    fireEvent(
+      window,
+      new CustomEvent('dummystoragechange', {
+        detail: '12',
+      }),
+    )
+    await screen.findByText('count: 12')
+    // expect(storageData.count).toBe('11')
   })
 })

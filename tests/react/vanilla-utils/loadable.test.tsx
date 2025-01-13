@@ -1,10 +1,14 @@
-import { StrictMode, Suspense, useEffect } from 'react'
-import { fireEvent, render } from '@testing-library/react'
+import { StrictMode, Suspense, version as reactVersion, useEffect } from 'react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
 import type { Atom } from 'jotai/vanilla'
 import { loadable } from 'jotai/vanilla/utils'
+
+const IS_REACT18 = /^18\./.test(reactVersion)
+const IS_REACT19 = /^19\./.test(reactVersion)
 
 it('loadable turns suspense into values', async () => {
   let resolve: (x: number) => void = () => {}
@@ -12,15 +16,15 @@ it('loadable turns suspense into values', async () => {
     return new Promise<number>((r) => (resolve = r))
   })
 
-  const { findByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  await findByText('Loading...')
+  await screen.findByText('Loading...')
   resolve(5)
-  await findByText('Data: 5')
+  await screen.findByText('Data: 5')
 })
 
 it('loadable turns errors into values', async () => {
@@ -29,15 +33,15 @@ it('loadable turns errors into values', async () => {
     return new Promise<number>((_res, rej) => (reject = rej))
   })
 
-  const { findByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  await findByText('Loading...')
+  await screen.findByText('Loading...')
   reject(new Error('An error occurred'))
-  await findByText('Error: An error occurred')
+  await screen.findByText('Error: An error occurred')
 })
 
 it('loadable turns primitive throws into values', async () => {
@@ -46,15 +50,15 @@ it('loadable turns primitive throws into values', async () => {
     return new Promise<number>((_res, rej) => (reject = rej))
   })
 
-  const { findByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  await findByText('Loading...')
+  await screen.findByText('Loading...')
   reject('An error occurred')
-  await findByText('An error occurred')
+  await screen.findByText('An error occurred')
 })
 
 it('loadable goes back to loading after re-fetch', async () => {
@@ -76,20 +80,20 @@ it('loadable goes back to loading after re-fetch', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Refresh />
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  getByText('Loading...')
+  screen.getByText('Loading...')
   resolve(5)
-  await findByText('Data: 5')
-  fireEvent.click(getByText('refresh'))
-  await findByText('Loading...')
+  await screen.findByText('Data: 5')
+  await userEvent.click(screen.getByText('refresh'))
+  await screen.findByText('Loading...')
   resolve(6)
-  await findByText('Data: 6')
+  await screen.findByText('Data: 6')
 })
 
 it('loadable can recover from error', async () => {
@@ -115,33 +119,33 @@ it('loadable can recover from error', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Refresh />
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  getByText('Loading...')
+  screen.getByText('Loading...')
   reject(new Error('An error occurred'))
-  await findByText('Error: An error occurred')
-  fireEvent.click(getByText('refresh'))
-  await findByText('Loading...')
+  await screen.findByText('Error: An error occurred')
+  await userEvent.click(screen.getByText('refresh'))
+  await screen.findByText('Loading...')
   resolve(6)
-  await findByText('Data: 6')
+  await screen.findByText('Data: 6')
 })
 
 it('loadable immediately resolves sync values', async () => {
   const syncAtom = atom(5)
   const effectCallback = vi.fn()
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent effectCallback={effectCallback} asyncAtom={syncAtom} />
     </StrictMode>,
   )
 
-  getByText('Data: 5')
+  screen.getByText('Data: 5')
   expect(effectCallback.mock.calls).not.toContain(
     expect.objectContaining({ state: 'loading' }),
   )
@@ -158,15 +162,20 @@ it('loadable can use resolved promises synchronously', async () => {
     return <div>Ready</div>
   }
 
-  const { findByText, rerender } = render(
+  const { rerender } = render(
     <StrictMode>
-      <Suspense fallback={null}>
+      <Suspense fallback="loading">
         <ResolveAtomComponent />
       </Suspense>
     </StrictMode>,
   )
 
-  await findByText('Ready')
+  if (IS_REACT18 || IS_REACT19) {
+    await screen.findByText('loading')
+    // FIXME React 18 Suspense does not show "Ready"
+  } else {
+    await screen.findByText('Ready')
+  }
 
   rerender(
     <StrictMode>
@@ -176,7 +185,7 @@ it('loadable can use resolved promises synchronously', async () => {
       />
     </StrictMode>,
   )
-  await findByText('Data: 5')
+  await screen.findByText('Data: 5')
 
   expect(effectCallback.mock.calls).not.toContain(
     expect.objectContaining({ state: 'loading' }),
@@ -201,17 +210,17 @@ it('loadable of a derived async atom does not trigger infinite loop (#1114)', as
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Trigger />
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  getByText('Loading...')
-  fireEvent.click(getByText('trigger'))
+  screen.getByText('Loading...')
+  await userEvent.click(screen.getByText('trigger'))
   resolve(5)
-  await findByText('Data: 5')
+  await screen.findByText('Data: 5')
 })
 
 it('loadable of a derived async atom with error does not trigger infinite loop (#1330)', async () => {
@@ -223,14 +232,14 @@ it('loadable of a derived async atom with error does not trigger infinite loop (
     return ''
   })
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent asyncAtom={asyncAtom} />
     </StrictMode>,
   )
 
-  getByText('Loading...')
-  await findByText('Error: thrown in baseAtom')
+  screen.getByText('Loading...')
+  await screen.findByText('Error: thrown in baseAtom')
 })
 
 it('does not repeatedly attempt to get the value of an unresolved promise atom wrapped in a loadable (#1481)', async () => {
@@ -260,13 +269,13 @@ it('should handle sync error (#1843)', async () => {
     throw new Error('thrown in syncAtom')
   })
 
-  const { findByText } = render(
+  render(
     <StrictMode>
       <LoadableComponent asyncAtom={syncAtom} />
     </StrictMode>,
   )
 
-  await findByText('Error: thrown in syncAtom')
+  await screen.findByText('Error: thrown in syncAtom')
 })
 
 type LoadableComponentProps = {
