@@ -1,3 +1,5 @@
+import type { INTERNAL_PrdStore as Store } from './store'
+
 type Getter = <Value>(atom: Atom<Value>) => Value
 
 type Setter = <Value, Args extends unknown[], Result>(
@@ -47,6 +49,11 @@ export interface Atom<Value> {
    * @private
    */
   debugPrivate?: boolean
+  /**
+   * Fires after atom is referenced by the store for the first time
+   * This is still an experimental API and subject to change without notice.
+   */
+  unstable_onInit?: (store: Store) => void
 }
 
 export interface WritableAtom<Value, Args extends unknown[], Result>
@@ -81,19 +88,27 @@ export function atom<Value, Args extends unknown[], Result>(
   write: Write<Args, Result>,
 ): WritableAtom<Value, Args, Result> & WithInitialValue<Value>
 
+// primitive atom without initial value
+export function atom<Value>(): PrimitiveAtom<Value | undefined> &
+  WithInitialValue<Value | undefined>
+
 // primitive atom
 export function atom<Value>(
   initialValue: Value,
 ): PrimitiveAtom<Value> & WithInitialValue<Value>
 
 export function atom<Value, Args extends unknown[], Result>(
-  read: Value | Read<Value, SetAtom<Args, Result>>,
+  read?: Value | Read<Value, SetAtom<Args, Result>>,
   write?: Write<Args, Result>,
 ) {
   const key = `atom${++keyCount}`
   const config = {
-    toString: () => key,
-  } as WritableAtom<Value, Args, Result> & { init?: Value }
+    toString() {
+      return import.meta.env?.MODE !== 'production' && this.debugLabel
+        ? key + ':' + this.debugLabel
+        : key
+    },
+  } as WritableAtom<Value, Args, Result> & { init?: Value | undefined }
   if (typeof read === 'function') {
     config.read = read as Read<Value, SetAtom<Args, Result>>
   } else {

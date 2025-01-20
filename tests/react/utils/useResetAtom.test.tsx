@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
-import { fireEvent, render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { it } from 'vitest'
 import { useAtom } from 'jotai/react'
 import { useResetAtom } from 'jotai/react/utils'
@@ -24,33 +25,33 @@ it('atomWithReset resets to its first value', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
-  await findByText('count: 0')
+  await screen.findByText('count: 0')
 
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 1')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 2')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 3')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 1')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 2')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 3')
 
-  fireEvent.click(getByText('reset'))
-  await findByText('count: 0')
+  await userEvent.click(screen.getByText('reset'))
+  await screen.findByText('count: 0')
 
-  fireEvent.click(getByText('set to 10'))
-  await findByText('count: 10')
+  await userEvent.click(screen.getByText('set to 10'))
+  await screen.findByText('count: 10')
 
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 11')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 12')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 13')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 11')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 12')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 13')
 })
 
 it('atomWithReset reset based on previous value', async () => {
@@ -63,7 +64,9 @@ it('atomWithReset reset based on previous value', async () => {
         <div>count: {count}</div>
         <button
           onClick={() =>
-            setValue((oldValue) => (oldValue === 3 ? RESET : oldValue + 1))
+            setValue((oldValue) =>
+              oldValue === 3 ? (RESET as never) : oldValue + 1,
+            )
           }
         >
           increment till 3, then reset
@@ -72,23 +75,23 @@ it('atomWithReset reset based on previous value', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
-  await findByText('count: 0')
+  await screen.findByText('count: 0')
 
-  fireEvent.click(getByText('increment till 3, then reset'))
-  await findByText('count: 1')
-  fireEvent.click(getByText('increment till 3, then reset'))
-  await findByText('count: 2')
-  fireEvent.click(getByText('increment till 3, then reset'))
-  await findByText('count: 3')
+  await userEvent.click(screen.getByText('increment till 3, then reset'))
+  await screen.findByText('count: 1')
+  await userEvent.click(screen.getByText('increment till 3, then reset'))
+  await screen.findByText('count: 2')
+  await userEvent.click(screen.getByText('increment till 3, then reset'))
+  await screen.findByText('count: 3')
 
-  fireEvent.click(getByText('increment till 3, then reset'))
-  await findByText('count: 0')
+  await userEvent.click(screen.getByText('increment till 3, then reset'))
+  await screen.findByText('count: 0')
 })
 
 it('atomWithReset through read-write atom', async () => {
@@ -96,7 +99,7 @@ it('atomWithReset through read-write atom', async () => {
   const countAtom = atom(
     (get) => get(primitiveAtom),
     (_get, set, newValue: number | typeof RESET) =>
-      set(primitiveAtom, newValue),
+      set(primitiveAtom, newValue as never),
   )
 
   const Parent = () => {
@@ -111,19 +114,19 @@ it('atomWithReset through read-write atom', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
-  await findByText('count: 0')
+  await screen.findByText('count: 0')
 
-  fireEvent.click(getByText('set to 10'))
-  await findByText('count: 10')
+  await userEvent.click(screen.getByText('set to 10'))
+  await screen.findByText('count: 10')
 
-  fireEvent.click(getByText('reset'))
-  await findByText('count: 0')
+  await userEvent.click(screen.getByText('reset'))
+  await screen.findByText('count: 0')
 })
 
 it('useResetAtom with custom atom', async () => {
@@ -133,6 +136,8 @@ it('useResetAtom with custom atom', async () => {
         return state + 1
       case RESET:
         return 0
+      default:
+        throw new Error('unknown action')
     }
   }
 
@@ -150,21 +155,21 @@ it('useResetAtom with custom atom', async () => {
     )
   }
 
-  const { findByText, getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
-  await findByText('count: 0')
+  await screen.findByText('count: 0')
 
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 1')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 2')
-  fireEvent.click(getByText('increment'))
-  await findByText('count: 3')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 1')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 2')
+  await userEvent.click(screen.getByText('increment'))
+  await screen.findByText('count: 3')
 
-  fireEvent.click(getByText('reset'))
-  await findByText('count: 0')
+  await userEvent.click(screen.getByText('reset'))
+  await screen.findByText('count: 0')
 })

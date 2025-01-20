@@ -1,6 +1,6 @@
 ---
 title: atomWithToggle
-nav: 8.03
+nav: 9.04
 keywords: creators,toggle
 ---
 
@@ -13,13 +13,13 @@ import { WritableAtom, atom } from 'jotai'
 
 export function atomWithToggle(
   initialValue?: boolean,
-): WritableAtom<boolean, boolean | undefined> {
+): WritableAtom<boolean, [boolean?], void> {
   const anAtom = atom(initialValue, (get, set, nextValue?: boolean) => {
     const update = nextValue ?? !get(anAtom)
     set(anAtom, update)
   })
 
-  return anAtom as WritableAtom<boolean, boolean | undefined>
+  return anAtom as WritableAtom<boolean, [boolean?], void>
 }
 ```
 

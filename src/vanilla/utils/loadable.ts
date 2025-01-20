@@ -5,6 +5,9 @@ const cache1 = new WeakMap()
 const memo1 = <T>(create: () => T, dep1: object): T =>
   (cache1.has(dep1) ? cache1 : cache1.set(dep1, create())).get(dep1)
 
+const isPromise = <Value>(x: unknown): x is Promise<Awaited<Value>> =>
+  x instanceof Promise
+
 export type Loadable<Value> =
   | { state: 'loading' }
   | { state: 'hasError'; error: unknown }
@@ -14,7 +17,10 @@ const LOADING: Loadable<unknown> = { state: 'loading' }
 
 export function loadable<Value>(anAtom: Atom<Value>): Atom<Loadable<Value>> {
   return memo1(() => {
-    const loadableCache = new WeakMap<Promise<void>, Loadable<Value>>()
+    const loadableCache = new WeakMap<
+      Promise<Awaited<Value>>,
+      Loadable<Value>
+    >()
     const refreshAtom = atom(0)
 
     if (import.meta.env?.MODE !== 'production') {
@@ -30,25 +36,30 @@ export function loadable<Value>(anAtom: Atom<Value>): Atom<Loadable<Value>> {
         } catch (error) {
           return { state: 'hasError', error } as Loadable<Value>
         }
-        if (!(value instanceof Promise)) {
+        if (!isPromise<Value>(value)) {
           return { state: 'hasData', data: value } as Loadable<Value>
         }
         const promise = value
-        const cached = loadableCache.get(promise)
-        if (cached) {
-          return cached
+        const cached1 = loadableCache.get(promise)
+        if (cached1) {
+          return cached1
+        }
+        promise.then(
+          (data) => {
+            loadableCache.set(promise, { state: 'hasData', data })
+            setSelf()
+          },
+          (error) => {
+            loadableCache.set(promise, { state: 'hasError', error })
+            setSelf()
+          },
+        )
+
+        const cached2 = loadableCache.get(promise)
+        if (cached2) {
+          return cached2
         }
         loadableCache.set(promise, LOADING as Loadable<Value>)
-        promise
-          .then(
-            (data) => {
-              loadableCache.set(promise, { state: 'hasData', data })
-            },
-            (error) => {
-              loadableCache.set(promise, { state: 'hasError', error })
-            },
-          )
-          .finally(setSelf)
         return LOADING as Loadable<Value>
       },
       (_get, set) => {

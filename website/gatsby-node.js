@@ -1,9 +1,25 @@
 exports.createPages = ({ actions }) => {
   const { createRedirect } = actions;
 
+  actions.setWebpackConfig({
+    module: {
+      rules: [
+        {
+          test: require.resolve(`@gatsbyjs/reach-router/index`),
+          type: `javascript/auto`,
+          use: [
+            {
+              loader: require.resolve(`./reach-router`),
+            },
+          ],
+        },
+      ],
+    },
+  });
+
   createRedirect({
-    fromPath: `/docs`,
-    toPath: `/docs/introduction`,
+    fromPath: `/docs/introduction`,
+    toPath: `/docs`,
     isPermanent: false,
   });
 

@@ -95,6 +95,7 @@ module.exports = {
     shortName: `Jotai`,
   },
   plugins: [
+    `gatsby-plugin-pnpm`,
     {
       resolve: `gatsby-source-filesystem`,
       options: {
@@ -115,7 +116,7 @@ module.exports = {
         appId: process.env.GATSBY_ALGOLIA_APP_ID,
         apiKey: process.env.ALGOLIA_ADMIN_KEY,
         queries,
-        // skipIndexing: process.env.ALGOLIA_SKIP_INDEXING === 'true',
+        skipIndexing: process.env.ALGOLIA_SKIP_INDEXING === 'true',
       },
     },
     `gatsby-plugin-sitemap`,

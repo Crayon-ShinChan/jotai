@@ -15,12 +15,12 @@ atomFamily(initializeAtom, areEqual): (param) => Atom
 ```
 
 This will create a function that takes `param` and returns an atom.
-If it's already created, it will return it from the cache.
-`initializeAtom` is function that can return any kind of atom (`atom()`, `atomWithDefault()`, ...).
-Note that `areEqual` is optional, which tell
+If the atom has already been created, it will be returned from the cache.
+`initializeAtom` is a function that can return any kind of atom (`atom()`, `atomWithDefault()`, ...).
+Note that the `areEqual` argument is optional and compares
 if two params are equal (defaults to `Object.is`).
 
-To reproduce the similar behavior to [Recoil's atomFamily/selectorFamily](https://recoiljs.org/docs/api-reference/utils/atomFamily),
+To reproduce behavior similar to [Recoil's atomFamily/selectorFamily](https://recoiljs.org/docs/api-reference/utils/atomFamily),
 specify a deepEqual function to `areEqual`. For example:
 
 ```js
@@ -71,7 +71,7 @@ This is crucial if you use infinite number of params.
 There are two ways to remove params.
 
 - `myFamily.remove(param)` allows you to remove a specific param.
-- `myFamily.setShouldRemove(shouldRemove)` is to register `shouldRemove` function which runs immediately **and** when you are to get an atom from a cache.
+- `myFamily.setShouldRemove(shouldRemove)` is to register `shouldRemove` function which runs immediately **and** when you are about to get an atom from a cache.
   - shouldRemove is a function that takes two arguments `createdAt` in milliseconds and `param`, and returns a boolean value.
   - setting `null` will remove the previously registered function.
 
@@ -112,6 +112,6 @@ const todoFamily = atomFamily(
 )
 ```
 
-### Codesandbox
+### Stackblitz
 
-<CodeSandbox id="huxd4i" />
+<Stackblitz id="vitejs-vite-rx6npn" file="src%2FApp.tsx" />

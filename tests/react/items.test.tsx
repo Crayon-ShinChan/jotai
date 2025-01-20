@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { it } from 'vitest'
 import { useAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
@@ -61,34 +62,34 @@ it('remove an item, then add another', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <List />
     </StrictMode>,
   )
 
-  fireEvent.click(getByText('Add'))
-  await findByText('item1 checked: no')
+  await userEvent.click(screen.getByText('Add'))
+  await screen.findByText('item1 checked: no')
 
-  fireEvent.click(getByText('Add'))
+  await userEvent.click(screen.getByText('Add'))
   await waitFor(() => {
-    getByText('item1 checked: no')
-    getByText('item2 checked: no')
+    screen.getByText('item1 checked: no')
+    screen.getByText('item2 checked: no')
   })
 
-  fireEvent.click(getByText('Check item2'))
+  await userEvent.click(screen.getByText('Check item2'))
   await waitFor(() => {
-    getByText('item1 checked: no')
-    getByText('item2 checked: yes')
+    screen.getByText('item1 checked: no')
+    screen.getByText('item2 checked: yes')
   })
 
-  fireEvent.click(getByText('Remove item1'))
-  await findByText('item2 checked: yes')
+  await userEvent.click(screen.getByText('Remove item1'))
+  await screen.findByText('item2 checked: yes')
 
-  fireEvent.click(getByText('Add'))
+  await userEvent.click(screen.getByText('Add'))
   await waitFor(() => {
-    getByText('item2 checked: yes')
-    getByText('item3 checked: no')
+    screen.getByText('item2 checked: yes')
+    screen.getByText('item3 checked: no')
   })
 })
 
@@ -190,14 +191,14 @@ it('add an item with filtered list', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <List />
     </StrictMode>,
   )
 
-  fireEvent.click(getByText('Checked'))
-  fireEvent.click(getByText('Add'))
-  fireEvent.click(getByText('All'))
-  await findByText('item1 checked: no')
+  await userEvent.click(screen.getByText('Checked'))
+  await userEvent.click(screen.getByText('Add'))
+  await userEvent.click(screen.getByText('All'))
+  await screen.findByText('item1 checked: no')
 })

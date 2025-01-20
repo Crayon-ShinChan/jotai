@@ -1,15 +1,22 @@
+/* eslint-disable react/no-unescaped-entities */
 import { StrictMode, Suspense, useEffect, useRef, useState } from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import userEventOrig from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
 import type { Atom, Getter } from 'jotai/vanilla'
+
+const userEvent = {
+  click: (element: Element) => act(() => userEventOrig.click(element)),
+}
 
 const useCommitCount = () => {
   const commitCountRef = useRef(1)
   useEffect(() => {
     commitCountRef.current += 1
   })
+  // eslint-disable-next-line react-compiler/react-compiler
   return commitCountRef.current
 }
 
@@ -33,16 +40,16 @@ it('works with 2 level dependencies', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <>
       <Counter />
     </>,
   )
 
-  await findByText('commits: 1, count: 1, doubled: 2, tripled: 6')
+  await screen.findByText('commits: 1, count: 1, doubled: 2, tripled: 6')
 
-  fireEvent.click(getByText('button'))
-  await findByText('commits: 2, count: 2, doubled: 4, tripled: 12')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('commits: 2, count: 2, doubled: 4, tripled: 12')
 })
 
 it('works a primitive atom and a dependent async atom', async () => {
@@ -66,27 +73,29 @@ it('works a primitive atom and a dependent async atom', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
-    <StrictMode>
-      <Suspense fallback="loading">
-        <Counter />
-      </Suspense>
-    </StrictMode>,
-  )
+  await act(async () => {
+    render(
+      <StrictMode>
+        <Suspense fallback="loading">
+          <Counter />
+        </Suspense>
+      </StrictMode>,
+    )
+  })
 
-  await findByText('loading')
+  await screen.findByText('loading')
   resolve()
-  await findByText('count: 1, doubled: 2')
+  await screen.findByText('count: 1, doubled: 2')
 
-  fireEvent.click(getByText('button'))
-  await findByText('loading')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('loading')
   resolve()
-  await findByText('count: 2, doubled: 4')
+  await screen.findByText('count: 2, doubled: 4')
 
-  fireEvent.click(getByText('button'))
-  await findByText('loading')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('loading')
   resolve()
-  await findByText('count: 3, doubled: 6')
+  await screen.findByText('count: 3, doubled: 6')
 })
 
 it('should keep an atom value even if unmounted', async () => {
@@ -126,35 +135,35 @@ it('should keep an atom value even if unmounted', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
   await waitFor(() => {
-    getByText('count: 0')
-    getByText('derived: 0')
+    screen.getByText('count: 0')
+    screen.getByText('derived: 0')
   })
   expect(derivedFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 1')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 1')
   })
   expect(derivedFn).toHaveReturnedTimes(2)
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('hidden')
+    screen.getByText('hidden')
   })
   expect(derivedFn).toHaveReturnedTimes(2)
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 1')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 1')
   })
   expect(derivedFn).toHaveReturnedTimes(2)
 })
@@ -189,25 +198,25 @@ it('should keep a dependent atom value even if unmounted', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
-  await findByText('derived: 0')
+  await screen.findByText('derived: 0')
   expect(derivedFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('toggle'))
-  await findByText('count: 0')
+  await userEvent.click(screen.getByText('toggle'))
+  await screen.findByText('count: 0')
   expect(derivedFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 1')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 1')
   expect(derivedFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('toggle'))
-  await findByText('derived: 1')
+  await userEvent.click(screen.getByText('toggle'))
+  await screen.findByText('derived: 1')
   expect(derivedFn).toHaveReturnedTimes(2)
 })
 
@@ -231,7 +240,7 @@ it('should bail out updating if not changed', async () => {
     return <div>derived: {derived}</div>
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Counter />
       <DerivedCounter />
@@ -239,15 +248,15 @@ it('should bail out updating if not changed', async () => {
   )
 
   await waitFor(() => {
-    getByText('count: 0')
-    getByText('derived: 0')
+    screen.getByText('count: 0')
+    screen.getByText('derived: 0')
   })
   expect(derivedFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 0')
-    getByText('derived: 0')
+    screen.getByText('count: 0')
+    screen.getByText('derived: 0')
   })
   expect(derivedFn).toHaveReturnedTimes(1)
 })
@@ -283,7 +292,7 @@ it('should bail out updating if not changed, 2 level', async () => {
     return <div>anotherCount: {anotherCount}</div>
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Counter />
       <DerivedCounter />
@@ -291,17 +300,17 @@ it('should bail out updating if not changed, 2 level', async () => {
   )
 
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('anotherCount: 10')
+    screen.getByText('count: 1')
+    screen.getByText('anotherCount: 10')
   })
   expect(getDataCountFn).toHaveReturnedTimes(1)
   expect(getDataObjFn).toHaveReturnedTimes(1)
   expect(getAnotherCountFn).toHaveReturnedTimes(1)
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('anotherCount: 10')
+    screen.getByText('count: 2')
+    screen.getByText('anotherCount: 10')
   })
   expect(getDataCountFn).toHaveReturnedTimes(2)
   expect(getDataObjFn).toHaveReturnedTimes(2)
@@ -332,16 +341,16 @@ it('derived atom to update base atom in callback', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <>
       <Counter />
     </>,
   )
 
-  await findByText('commits: 1, count: 1, doubled: 2')
+  await screen.findByText('commits: 1, count: 1, doubled: 2')
 
-  fireEvent.click(getByText('button'))
-  await findByText('commits: 2, count: 2, doubled: 4')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('commits: 2, count: 2, doubled: 4')
 })
 
 it('can read sync derived atom in write without initializing', async () => {
@@ -362,19 +371,19 @@ it('can read sync derived atom in write without initializing', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <Counter />
     </StrictMode>,
   )
 
-  await findByText('count: 1')
+  await screen.findByText('count: 1')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 2')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 2')
 
-  fireEvent.click(getByText('button'))
-  await findByText('count: 3')
+  await userEvent.click(screen.getByText('button'))
+  await screen.findByText('count: 3')
 })
 
 it('can remount atoms with dependency (#490)', async () => {
@@ -413,38 +422,38 @@ it('can remount atoms with dependency (#490)', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
   await waitFor(() => {
-    getByText('count: 0')
-    getByText('derived: 0')
+    screen.getByText('count: 0')
+    screen.getByText('derived: 0')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 1')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 1')
   })
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('hidden')
+    screen.getByText('hidden')
   })
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 1')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 1')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('derived: 2')
+    screen.getByText('count: 2')
+    screen.getByText('derived: 2')
   })
 })
 
@@ -494,45 +503,45 @@ it('can remount atoms with intermediate atom', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 2')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 2')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('derived: 4')
+    screen.getByText('count: 2')
+    screen.getByText('derived: 4')
   })
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('hidden')
+    screen.getByText('count: 2')
+    screen.getByText('hidden')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 3')
-    getByText('hidden')
+    screen.getByText('count: 3')
+    screen.getByText('hidden')
   })
 
-  fireEvent.click(getByText('toggle'))
+  await userEvent.click(screen.getByText('toggle'))
   await waitFor(() => {
-    getByText('count: 3')
-    getByText('derived: 6')
+    screen.getByText('count: 3')
+    screen.getByText('derived: 6')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 4')
-    getByText('derived: 8')
+    screen.getByText('count: 4')
+    screen.getByText('derived: 8')
   })
 })
 
@@ -577,21 +586,21 @@ it('can update dependents with useEffect (#512)', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Parent />
     </StrictMode>,
   )
 
   await waitFor(() => {
-    getByText('count: 1')
-    getByText('derived: 2')
+    screen.getByText('count: 1')
+    screen.getByText('derived: 2')
   })
 
-  fireEvent.click(getByText('button'))
+  await userEvent.click(screen.getByText('button'))
   await waitFor(() => {
-    getByText('count: 2')
-    getByText('derived: 4')
+    screen.getByText('count: 2')
+    screen.getByText('derived: 4')
   })
 })
 
@@ -626,21 +635,21 @@ it('update unmounted atom with intermediate atom', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <DerivedCounter />
       <Control />
     </StrictMode>,
   )
 
-  await findByText('derived: 2')
+  await screen.findByText('derived: 2')
 
-  fireEvent.click(getByText('toggle enabled'))
-  fireEvent.click(getByText('increment count'))
-  await findByText('derived: -1')
+  await userEvent.click(screen.getByText('toggle enabled'))
+  await userEvent.click(screen.getByText('increment count'))
+  await screen.findByText('derived: -1')
 
-  fireEvent.click(getByText('toggle enabled'))
-  await findByText('derived: 4')
+  await userEvent.click(screen.getByText('toggle enabled'))
+  await screen.findByText('derived: 4')
 })
 
 it('Should bail for derived sync chains (#877)', async () => {
@@ -671,19 +680,19 @@ it('Should bail for derived sync chains (#877)', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
+  render(
     <StrictMode>
       <Input />
       <ForceValue />
     </StrictMode>,
   )
 
-  await findByText('My very long data')
+  await screen.findByText('My very long data')
   expect(syncAtomCount).toBe(1)
 
-  fireEvent.click(getByText(`set value to 'hello'`))
+  await userEvent.click(screen.getByText(`set value to 'hello'`))
 
-  await findByText('My very long data')
+  await screen.findByText('My very long data')
   expect(syncAtomCount).toBe(1)
 })
 
@@ -715,21 +724,23 @@ it('Should bail for derived async chains (#877)', async () => {
     )
   }
 
-  const { getByText, findByText } = render(
-    <StrictMode>
-      <Suspense fallback="loading">
-        <Input />
-        <ForceValue />
-      </Suspense>
-    </StrictMode>,
-  )
+  await act(async () => {
+    render(
+      <StrictMode>
+        <Suspense fallback="loading">
+          <Input />
+          <ForceValue />
+        </Suspense>
+      </StrictMode>,
+    )
+  })
 
-  await findByText('My very long data')
+  await screen.findByText('My very long data')
   expect(syncAtomCount).toBe(1)
 
-  fireEvent.click(getByText(`set value to 'hello'`))
+  await userEvent.click(screen.getByText(`set value to 'hello'`))
 
-  await findByText('My very long data')
+  await screen.findByText('My very long data')
   expect(syncAtomCount).toBe(1)
 })
 
@@ -761,21 +772,21 @@ it('update correctly with async updates (#1250)', async () => {
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <App />
     </StrictMode>,
   )
 
   await waitFor(() => {
-    getByText('alsoCount: 0')
-    getByText('countIsGreaterThanOne: false')
+    screen.getByText('alsoCount: 0')
+    screen.getByText('countIsGreaterThanOne: false')
   })
 
-  fireEvent.click(getByText('Increment Count Twice'))
+  await userEvent.click(screen.getByText('Increment Count Twice'))
   await waitFor(() => {
-    getByText('alsoCount: 2')
-    getByText('countIsGreaterThanOne: true')
+    screen.getByText('alsoCount: 2')
+    screen.getByText('countIsGreaterThanOne: true')
   })
 })
 
@@ -806,18 +817,18 @@ describe('glitch free', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <App />
         <Control />
       </StrictMode>,
     )
 
-    await findByText('value: v0: 0, v1: 0, v2: 0')
+    await screen.findByText('value: v0: 0, v1: 0, v2: 0')
     expect(computeValue).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(getByText('button'))
-    await findByText('value: v0: 1, v1: 1, v2: 1')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('value: v0: 1, v1: 1, v2: 1')
     expect(computeValue).toHaveBeenCalledTimes(2)
   })
 
@@ -847,18 +858,18 @@ describe('glitch free', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <App />
         <Control />
       </StrictMode>,
     )
 
-    await findByText('value: 0')
+    await screen.findByText('value: 0')
     expect(computeValue).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(getByText('button'))
-    await findByText('value: 1')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('value: 1')
     expect(computeValue).toHaveBeenCalledTimes(2)
   })
 
@@ -890,31 +901,34 @@ describe('glitch free', () => {
       )
     }
 
-    const { getByText, findByText } = render(
+    render(
       <StrictMode>
         <App />
         <Control />
       </StrictMode>,
     )
 
-    await findByText('value: 0')
+    await screen.findByText('value: 0')
     expect(computeValue).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(getByText('button'))
-    await findByText('value: 1')
+    await userEvent.click(screen.getByText('button'))
+    await screen.findByText('value: 1')
     expect(computeValue).toHaveBeenCalledTimes(2)
   })
 })
 
 it('should not call read function for unmounted atoms in StrictMode (#2076)', async () => {
   const countAtom = atom(1)
-  let firstDerivedFn: ReturnType<typeof vi.fn> | undefined
+  let firstDerivedFn:
+    | (((get: Getter) => number) & { mockClear: () => void })
+    | undefined
 
   const Component = () => {
     const memoizedAtomRef = useRef<Atom<number> | null>(null)
     if (!memoizedAtomRef.current) {
       const derivedFn = vi.fn((get: Getter) => get(countAtom))
       if (!firstDerivedFn) {
+        // eslint-disable-next-line react-compiler/react-compiler
         firstDerivedFn = derivedFn
       }
       memoizedAtomRef.current = atom(derivedFn)
@@ -942,16 +956,101 @@ it('should not call read function for unmounted atoms in StrictMode (#2076)', as
     )
   }
 
-  const { getByText } = render(
+  render(
     <StrictMode>
       <Main />
     </StrictMode>,
   )
 
-  fireEvent.click(getByText('hide'))
+  await userEvent.click(screen.getByText('hide'))
   expect(firstDerivedFn).toBeCalledTimes(1)
   firstDerivedFn?.mockClear()
 
-  fireEvent.click(getByText('show'))
+  await userEvent.click(screen.getByText('show'))
   expect(firstDerivedFn).toBeCalledTimes(0)
+})
+
+it('works with unused hook (#2554)', async () => {
+  const isFooAtom = atom(false)
+  const isBarAtom = atom(false)
+  const isActive1Atom = atom<boolean>((get) => {
+    return get(isFooAtom) && get(isBarAtom)
+  })
+  const isActive2Atom = atom<boolean>((get) => {
+    return get(isFooAtom) && get(isActive1Atom)
+  })
+  const activateAction = atom(undefined, async (_get, set) => {
+    set(isFooAtom, true)
+    set(isBarAtom, true)
+  })
+
+  const App = () => {
+    const activate = useSetAtom(activateAction)
+    useAtomValue(isActive1Atom)
+    const isRunning = useAtomValue(isActive2Atom)
+    return (
+      <div>
+        <button onClick={() => activate()}>Activate</button>
+        {isRunning ? 'running' : 'not running'}
+      </div>
+    )
+  }
+
+  render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+
+  await screen.findByText('not running')
+
+  await userEvent.click(screen.getByText('Activate'))
+  await screen.findByText('running')
+})
+
+it('works with async dependencies (#2565)', async () => {
+  const countAtom = atom(0)
+  const countUpAction = atom(null, (_get, set) => {
+    set(countAtom, (prev) => prev + 1)
+  })
+  const totalCountAtom = atom(async (get) => {
+    const base = await Promise.resolve(100)
+    const count = get(countAtom)
+    return base + count
+  })
+
+  const Count = () => {
+    const count = useAtomValue(totalCountAtom)
+    return <p>count: {count}</p>
+  }
+  const App = () => {
+    const up = useSetAtom(countUpAction)
+    return (
+      <div>
+        <button onClick={up}>Count Up</button>
+        <Suspense fallback="loading">
+          <Count />
+        </Suspense>
+      </div>
+    )
+  }
+
+  await act(async () => {
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+  })
+
+  // FIXME this is not working
+  //await screen.findByText('loading')
+
+  await screen.findByText('count: 100')
+
+  await userEvent.click(screen.getByText('Count Up'))
+  await screen.findByText('count: 101')
+
+  await userEvent.click(screen.getByText('Count Up'))
+  await screen.findByText('count: 102')
 })

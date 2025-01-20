@@ -1,10 +1,13 @@
 import { createContext, createElement, useContext, useRef } from 'react'
-import type { FunctionComponentElement, ReactNode } from 'react'
+import type { FunctionComponent, ReactElement, ReactNode } from 'react'
 import { createStore, getDefaultStore } from '../vanilla.ts'
 
 type Store = ReturnType<typeof createStore>
 
-const StoreContext = createContext<Store | undefined>(undefined)
+type StoreContextType = ReturnType<typeof createContext<Store | undefined>>
+const StoreContext: StoreContextType = createContext<Store | undefined>(
+  undefined,
+)
 
 type Options = {
   store?: Store
@@ -15,14 +18,19 @@ export const useStore = (options?: Options): Store => {
   return options?.store || store || getDefaultStore()
 }
 
+/* eslint-disable react-compiler/react-compiler */
+// TODO should we consider using useState instead of useRef?
 export const Provider = ({
   children,
   store,
 }: {
   children?: ReactNode
   store?: Store
-}): FunctionComponentElement<{ value: Store | undefined }> => {
-  const storeRef = useRef<Store>()
+}): ReactElement<
+  { value: Store | undefined },
+  FunctionComponent<{ value: Store | undefined }>
+> => {
+  const storeRef = useRef<Store>(undefined)
   if (!store && !storeRef.current) {
     storeRef.current = createStore()
   }

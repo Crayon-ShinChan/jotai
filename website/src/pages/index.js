@@ -1,6 +1,7 @@
 import { Code } from '../components/code.js';
 import { CoreDemo } from '../components/core-demo.js';
 import { ExtensionsDemo } from '../components/extensions-demo.js';
+import { ExternalLink } from '../components/external-link.js';
 import { Headline } from '../components/headline.js';
 import { InlineCode } from '../components/inline-code.js';
 import { Intro } from '../components/intro.js';
@@ -13,7 +14,7 @@ export default function HomePage() {
   return (
     <>
       <Intro />
-      <div className="mt-12 space-y-12 lg:mt-24 lg:space-y-24">
+      <div className="mt-12 space-y-12 lg:mt-24 lg:space-y-24 text-pretty">
         <div className="space-y-4">
           <Headline>Introduction</Headline>
           <p>Jotai takes an atomic approach to global React state management.</p>
@@ -35,10 +36,10 @@ export default function HomePage() {
           <Headline>Getting started</Headline>
           <p className="!mb-8">
             This walks you through the process of creating a simple Jotai application. It starts
-            with installation and configuration, then explores the basics of the core API, and ends
-            with server-side rendering in a React framework.
+            with installation, then explores the basics of the core API, and ends with server-side
+            rendering in a React framework.
           </p>
-          <Tabs tabs={gettingStartedTabs} orientation="vertical" />
+          <Tabs tabs={gettingStartedTabs} />
         </div>
         <div className="space-y-4">
           <Headline>API overview</Headline>
@@ -54,7 +55,7 @@ export default function HomePage() {
             className="mt-4 block"
           >
             <img
-              src="https://storage.googleapis.com/candycode/jotai/jotai-course-banner.jpg"
+              src="https://cdn.candycode.com/jotai/jotai-course-banner.jpg"
               className="block rounded-md shadow-lg dark:!shadow-none sm:rounded-lg"
               alt="Jotai course"
               title="Jotai course"
@@ -69,6 +70,7 @@ export default function HomePage() {
 const apiTabs = {
   Core: (
     <section>
+      <h2>Core</h2>
       <p>
         Jotai has a very minimal API and is TypeScript oriented. It is as simple to use as React’s
         integrated <InlineCode>useState</InlineCode> hook, but all state is globally accessible,
@@ -79,6 +81,7 @@ const apiTabs = {
   ),
   Utilities: (
     <section>
+      <h2>Utilities</h2>
       <p>
         The Jotai package also includes a <InlineCode>jotai/utils</InlineCode> bundle. These extra
         functions add support for persisting an atom in localStorage, hydrating an atom during
@@ -90,6 +93,7 @@ const apiTabs = {
   ),
   Extensions: (
     <section>
+      <h2>Extensions</h2>
       <p>
         There are also separate packages for each official extension: tRPC, Immer, Query, XState,
         URQL, Optics, Relay, location, molecules, cache, and more.
@@ -114,70 +118,13 @@ const gettingStartedTabs = {
       <h2>Installation</h2>
       <p>First add Jotai as a dependency to your React project.</p>
       <Code language="bash">{`# npm
-npm i jotai
+npm install jotai
 
 # yarn
 yarn add jotai
 
 # pnpm
 pnpm add jotai
-`}</Code>
-    </section>
-  ),
-  'Configuration': (
-    <section>
-      <h2>Configuration</h2>
-      <p>
-        We recommend adding the optional SWC or Babel plugin to enable React Fast Refresh
-        support for the best developer experience (framework specific).
-      </p>
-      <h3>Next.js (SWC)</h3>
-      <Code language="bash">{`# npm
-npm install --save-dev @swc-jotai/react-refresh
-
-# next.config.js
-experimental: {
-  swcPlugins: [['@swc-jotai/react-refresh', {}]],
-}
-`}</Code>
-      <h3>Next.js (Babel)</h3>
-      <Code language="bash">{`
-# .babelrc
-{
-  "presets": ["next/babel"],
-  "plugins": ["jotai/babel/plugin-react-refresh"]
-}
-`}</Code>
-      <h3>Vite (SWC)</h3>
-      <Code language="bash">{`# npm
-npm install --save-dev @swc-jotai/react-refresh
-
-# vite.config.ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
-
-export default defineConfig({
-  plugins: [
-    react({
-      plugins: [['@swc-jotai/react-refresh', {}]],
-    }),
-  ],
-});
-`}</Code>
-      <h3>Gatsby (Babel)</h3>
-      <Code language="bash">{`# npm
-npm install --save-dev babel-preset-gatsby
-
-# .babelrc
-{
-  "presets": ["babel-preset-gatsby"],
-  "plugins": ["jotai/babel/plugin-react-refresh"]
-}
-
-# gatsby-config.js
-flags: {
-  DEV_SSR: false,
-}
 `}</Code>
     </section>
   ),
@@ -198,7 +145,7 @@ const countryAtom = atom('Japan')
 
 const citiesAtom = atom(['Tokyo', 'Kyoto', 'Osaka'])
 
-const animeAtom = atom([
+export const animeAtom = atom([
   {
     title: 'Ghost in the Shell',
     year: 1995,
@@ -229,6 +176,8 @@ const animeAtom = atom([
       </p>
       <Code>{`import { useAtom } from 'jotai'
 
+import { animeAtom } from './atoms'
+
 const AnimeApp = () => {
   const [anime, setAnime] = useAtom(animeAtom)
 
@@ -251,7 +200,7 @@ const AnimeApp = () => {
       }}>
         Add Cowboy Bebop
       </button>
-    <>
+    </>
   )
 }`}</Code>
       <h3>Read and write from separate components</h3>
@@ -261,6 +210,8 @@ const AnimeApp = () => {
         optimize re-renders.
       </p>
       <Code>{`import { useAtomValue, useSetAtom } from 'jotai'
+
+import { animeAtom } from './atoms'
 
 const AnimeList = () => {
   const anime = useAtomValue(animeAtom)
@@ -316,27 +267,22 @@ const AnimeApp = () => {
     <section>
       <h2>Server-side rendering</h2>
       <p>
-        If server-side rendering with a framework such as Next.js or Gatsby, make sure to use at
-        least one Provider component at the root.
+        If server-side rendering with a framework such as{' '}
+        <ExternalLink to="https://nextjs.org">Next.js</ExternalLink> or{' '}
+        <ExternalLink to="https://waku.gg">Waku</ExternalLink>, make sure to add a Jotai Provider
+        component at the root.
       </p>
-      <Code>{`import { Provider } from 'jotai'
-
-// Placement is framework-specific (see below)
-<Provider>
-  {...}
-</Provider>
-`}</Code>
       <h3>Next.js (app directory)</h3>
       <p>
         Create the provider in a separate client component. Then import the provider into the root{' '}
         <InlineCode>layout.js</InlineCode> server component.
       </p>
-      <Code>{`// providers.js (app directory)
+      <Code>{`// ./components/providers.js
 'use client'
 
 import { Provider } from 'jotai'
 
-export default function Providers({ children }) {
+export const Providers = ({ children }) => {
   return (
     <Provider>
       {children}
@@ -345,8 +291,8 @@ export default function Providers({ children }) {
 }
 
 
-// layout.js (app directory)
-import Providers from './providers'
+// ./app/layout.js
+import { Providers } from '../components/providers'
 
 export default function RootLayout({ children }) {
   return (
@@ -364,7 +310,7 @@ export default function RootLayout({ children }) {
       <p>
         Create the provider in <InlineCode>_app.js</InlineCode>.
       </p>
-      <Code>{`// _app.js (pages directory)
+      <Code>{`// ./pages/_app.js
 import { Provider } from 'jotai'
 
 export default function App({ Component, pageProps }) {
@@ -375,32 +321,35 @@ export default function App({ Component, pageProps }) {
   )
 }
 `}</Code>
-      <h3>Gatsby</h3>
+      <h3>Waku</h3>
       <p>
-        Create the provider in a <InlineCode>gatsby-shared.js</InlineCode> file to share code
-        between <InlineCode>gatsby-browser.js</InlineCode> and{' '}
-        <InlineCode>gatsby-ssr.js</InlineCode>.
+        Create the provider in a separate client component. Then import the provider into the root
+        layout.
       </p>
-      <p>
-        Use the <InlineCode>wrapRootElement</InlineCode> API to place the provider.
-      </p>
-      <Code>{`
-// gatsby-shared.js
+      <Code>{`// ./src/components/providers.js
+'use client'
+
 import { Provider } from 'jotai'
 
-export const wrapRootElement = ({ element }) => {
+export const Providers = ({ children }) => {
   return (
     <Provider>
-      {element}
+      {children}
     </Provider>
   )
 }
 
-// gatsby-browser.js
-export { wrapRootElement } from './gatsby-shared'
 
-// gatsby-ssr.js
-export { wrapRootElement } from './gatsby-shared'
+// ./src/pages/_layout.js
+import { Providers } from '../components/providers'
+
+export default async function RootLayout({ children }) {
+  return (
+    <Providers>
+      {children}
+    </Providers>
+  )
+}
 `}</Code>
     </section>
   ),

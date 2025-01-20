@@ -1,4 +1,4 @@
-name: livecodes
+name: LiveCodes Preview
 
 on: [pull_request]
 
@@ -6,9 +6,14 @@ jobs:
   build_and_prepare:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
       - uses: live-codes/preview-in-livecodes@v1
         with:
-          install-command: "yarn install --frozen-lockfile --check-files"
-          build-command: "yarn build"
-          base-url: "https://{{LC::REF}}.preview-in-livecodes-demo.pages.dev"
+          install-command: pnpm install
+          build-command: pnpm build
+          base-url: 'https://{{LC::REF}}.preview-in-livecodes-demo.pages.dev'

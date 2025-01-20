@@ -19,10 +19,10 @@ jotai-tanstack-query currently supports TanStack Query v5.
 
 ### Install
 
-In addition to `jotai`, you have to install `jotai-tanstack-query`, `@tanstack/query-core` and `wonka` to use the extension.
+In addition to `jotai`, you have to install `jotai-tanstack-query` and `@tanstack/query-core` to use the extension.
 
 ```bash
-npm i jotai-tanstack-query @tanstack/query-core wonka
+npm install jotai-tanstack-query @tanstack/query-core
 ```
 
 ### Incremental Adoption
@@ -30,19 +30,18 @@ npm i jotai-tanstack-query @tanstack/query-core wonka
 You can incrementally adopt `jotai-tanstack-query` in your app. It's not an all or nothing solution. You just have to ensure you are using the same QueryClient instance. [QueryClient Setup](#referencing-the-same-instance-of-query-client-in-your-project).
 
 ```jsx
-# existing useQueryHook
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['todos'],
-    queryFn: fetchTodoList
-  });
+// existing useQueryHook
+const { data, isPending, isError } = useQuery({
+  queryKey: ['todos'],
+  queryFn: fetchTodoList,
+})
 
-# jotai-tanstack-query
-  const todosAtom = atomWithQuery(() => ({
-    queryKey: ['todos'],
-  }))
+// jotai-tanstack-query
+const todosAtom = atomWithQuery(() => ({
+  queryKey: ['todos'],
+}))
 
-  const [{ data, isPending, isError }] = useAtom(todosAtom)
-
+const [{ data, isPending, isError }] = useAtom(todosAtom)
 ```
 
 ### Exported functions
@@ -264,6 +263,8 @@ Although they reference methods same query key (`'todos'`), the `onSuccess` inva
 
 This will result in `todosAtom` showing stale data as it was not prompted to refetch.
 
+⚠️ Note: When using **Typescript**, it is recommended to use a Map when passing the queryClient value to useHydrateAtoms. You can find a working example in the [Initializing State on Render docs](https://jotai.org/docs/guides/initialize-atom-on-render#using-typescript)
+
 ```jsx
 import { Provider } from 'jotai/react'
 import { useHydrateAtoms } from 'jotai/react/utils'
@@ -339,7 +340,7 @@ See [a working example](https://codesandbox.io/s/4gfp6z) to learn more.
 In order to use the Devtools, you need to install it additionally.
 
 ```bash
-npm i @tanstack/react-query-devtools
+npm install @tanstack/react-query-devtools
 ```
 
 All you have to do is put the `<ReactQueryDevtools />` within `<QueryClientProvider />`.
@@ -434,12 +435,12 @@ Similar to `atomsWithQuery` and `atomsWithInfiniteQuery`, `atomWithMutation` als
 
 #### Basic demo
 
-<CodeSandbox id="jm8mf7" />
+<Stackblitz id="vitejs-vite-pr9eaf" file="src%2FApp.tsx" />
 
 #### Devtools demo
 
-<CodeSandbox id="zlp3pj" />
+<Stackblitz id="vitejs-vite-btdqkh" file="src%2FApp.tsx" />
 
 #### Hackernews
 
-<CodeSandbox id="8v4mc4" />
+<Stackblitz id="vitejs-vite-wqsyj8" file="src%2FApp.tsx" />
