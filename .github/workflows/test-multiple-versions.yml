@@ -10,17 +10,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: yarn
-      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-      - run: yarn install --frozen-lockfile --check-files
-      - name: Test Build # we don't have any other workflows to test build
-        run: yarn build
-      - name: Test Default
-        run: yarn test:ci
+          node-version: 'lts/*'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm build # we don't have any other workflows to test build
+      - run: pnpm test:spec
 
   test_matrix:
     runs-on: ubuntu-latest
@@ -33,19 +31,22 @@ jobs:
           - 18.0.0
           - 18.1.0
           - 18.2.0
-          - 18.3.0-canary-247738465-20240130
-          - 0.0.0-experimental-247738465-20240130
+          - 18.3.1
+          - 19.0.0
+          - 19.1.0-canary-d46b04a2-20250117
+          - 0.0.0-experimental-d46b04a2-20250117
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: yarn
-      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-      - run: yarn install --frozen-lockfile --check-files
+          node-version: 'lts/*'
+          cache: 'pnpm'
+      - run: pnpm install
       - name: Install legacy testing-library
         if: ${{ startsWith(matrix.react, '16.') || startsWith(matrix.react, '17.') }}
-        run: yarn add -D @testing-library/react@12.1.4
+        run: |
+          pnpm add -D @testing-library/react@12.1.4
       - name: Patch for React 16
         if: ${{ startsWith(matrix.react, '16.') }}
         run: |
@@ -53,8 +54,8 @@ jobs:
           sed -i~ 's/"jsx": "react-jsx"/"jsx": "react"/' tsconfig.json
           sed -i~ 's/import\.meta\.env[?]\.MODE/"DEVELOPMENT".toLowerCase()/' src/*.ts src/*/*.ts src/*/*/*.ts
       - name: Test Build # we need to build for babel tests
-        run: yarn build
+        run: pnpm build
       - name: Test ${{ matrix.react }}
         run: |
-          yarn add -D react@${{ matrix.react }} react-dom@${{ matrix.react }}
-          yarn test:ci
+          pnpm add -D react@${{ matrix.react }} react-dom@${{ matrix.react }}
+          pnpm test:spec
